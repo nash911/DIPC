@@ -31,7 +31,7 @@ def main(args):
         model_path=args.path+('latest_policy.pth' if args.latest else 'best_policy.pth'))
 
     # Evaluate saved best agent
-    _ = ddpg.final_evaluation(num_episodes=10)
+    _ = ddpg.final_evaluation(num_episodes=1)
 
 
 if __name__ == '__main__':

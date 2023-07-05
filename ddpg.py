@@ -1,6 +1,7 @@
 import numpy as np
 import gymnasium as gym
 import time
+import shutil
 import os
 import matplotlib.pyplot as plt
 
@@ -318,7 +319,7 @@ class DDPG():
 
         return min(episode_rewards), max(episode_lengths)
 
-    def final_evaluation(self, num_episodes: int = 10, record: bool = True,
+    def final_evaluation(self, num_episodes: int = 10, record: bool = False,
                          episode_len: int = 1000, record_path: str = 'videos/images/'
                          ) -> Sequence[float]:
         """
@@ -349,11 +350,11 @@ class DDPG():
         for e in range(num_episodes):
             observation, info = self.render_env.reset(seed=e)
 
-            # Save the rendered frame as a .png image
-            if record:
-                img = info.get('rgb_array', None)
-                img.save(record_path + ("img_%05d.png" % n))
-                n += 1
+            # # Save the rendered frame as a .png image
+            # if record:
+            #     img = info.get('img', None)
+            #     img.save(record_path + ("img_%05d.png" % n))
+            #     n += 1
 
             terminated = truncated = False
             episode_reward = 0
@@ -373,7 +374,7 @@ class DDPG():
 
                 # Save the rendered frame as a .png image
                 if record:
-                    img = info.get('rgb_array', None)
+                    img = info.get('img', None)
                     img.save(record_path + ("img_%05d.png" % n))
                     n += 1
 

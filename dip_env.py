@@ -280,7 +280,14 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
         self.steps_beyond_done = None
         self.counter = 0
-        return self.state, {}
+
+        if self.render_mode == 'human':
+            img = self.render()
+            info = {'img': img}
+        else:
+            info = {}
+
+        return self.state, info
 
 
     def render(self, return_image=True):
@@ -292,7 +299,6 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
         cart_width = 0.02
         cart_height = 0.02
-        #print("self.stateMatrixShape:", self.state.shape)
         cart_x = float(self.state[0,4])
         cart_y = float(0)
 
