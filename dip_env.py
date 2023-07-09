@@ -24,7 +24,7 @@ plt.ion()
 
 
 class DoubleInvertedPendulumCartEnv(gym.Env):
-    def __init__(self, render_mode=None):
+    def __init__(self, episode_len, render_mode=None):
         self.cart_mass = 0.5
         self.pendulum_mass_1 = 0.162
         self.pendulum_mass_2 = 0.203
@@ -38,6 +38,7 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         self.inertia_2 = (self.pendulum_mass_2 * (self.pendulum_length_2**2))/12
         self.tau = 0.0395
 
+        self.episode_len = episode_len
         self.render_mode = render_mode
 
         self.x_goal_position = 0
@@ -96,6 +97,7 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
     def step(self, action):
         state = self.state
+        action = np.clip(action, -1.0, 1.0)
         theta_dot = state.item(0)
         phi_dot = state.item(1)
         theta = state.item(2)
@@ -164,36 +166,60 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
         flag = self.x_goal_position
 
-        reward = 0
-        alive_bonus = 10
-        x_tip = (x + self.pendulum_length_1 * np.sin(theta) +
-                 self.pendulum_length_2 * np.sin(phi))
-        y_tip = (self.pendulum_length_1 * np.cos(theta) +
-                 self.pendulum_length_2 * np.cos(phi))
+        # reward = 0
+        # alive_bonus = 10
+        # x_tip = (x + self.pendulum_length_1 * np.sin(theta) +
+        #          self.pendulum_length_2 * np.sin(phi))
+        # y_tip = (self.pendulum_length_1 * np.cos(theta) +
+        #          self.pendulum_length_2 * np.cos(phi))
+        #
+        # dist_penalty = ((0.01 * (x_tip - flag)**2) + ((((y_tip - 0.464)))**2) +
+        #                 0.5 * (1 - np.exp(-1 * (0.5 * (0.5**2 * ((x - flag)**2))))))
+        # velocity_penalty = \
+        #     (0.001 * (theta_dot**2)) + (0.001 * (phi_dot)**2) + (0.005 * (x_dot**2))
+        #
+        # reward = alive_bonus - dist_penalty - velocity_penalty
+        #
+        # terminated = bool(x < -self.x_threshold or x > self.x_threshold or
+        #                   theta > 90*2*np.pi/360 or theta < -90*2*np.pi/360)
+        # truncated = bool(self.counter >= self.episode_len)
+        #
+        # if (
+        #     x > flag - 0.1 and x < flag + 0.1
+        #     and x_dot > -0.1 and x_dot < 0.1
+        #     and theta_dot > -0.05 and theta_dot < 0.05
+        #     and np.sin(theta) > -0.05 and np.sin(theta) < 0.05
+        #     and phi_dot > -0.05 and phi_dot < 0.05
+        #     and np.sin(phi) > -0.05 and np.sin(phi) < 0.05
+        # ):
+        #     reward += 100.0
+        #
+        # if(x < -self.x_threshold or x > self.x_threshold):
+        #     reward -= 100
 
-        dist_penalty = ((0.01 * (x_tip - flag)**2) + ((((y_tip - 0.464)))**2) +
-                        0.5 * (1 - np.exp(-1 * (0.5 * (0.5**2 * ((x - flag)**2))))))
-        velocity_penalty = \
-            (0.001 * (theta_dot**2)) + (0.001 * (phi_dot)**2) + (0.005 * (x_dot**2))
 
-        reward = alive_bonus - dist_penalty - velocity_penalty
+        # x_tip = (x + self.pendulum_length_1 * np.sin(theta) +
+        #          self.pendulum_length_2 * np.sin(phi))
+        # y_tip = (self.pendulum_length_1 * np.cos(theta) +
+        #          self.pendulum_length_2 * np.cos(phi))
 
-        terminated = bool(x < -self.x_threshold or x > self.x_threshold or
-                          theta > 90*2*np.pi/360 or theta < -90*2*np.pi/360)
-        truncated = bool(self.counter >= 1000)
+        # dist_penalty = ((0.01 * (x_tip - flag)**2) + ((((y_tip - 0.464)))**2) +
+        #                 0.5 * (1 - np.exp(-1 * (0.5 * (0.5**2 * ((x - flag)**2))))))
+        # velocity_penalty = \
+        #     (0.001 * (theta_dot**2)) + (0.001 * (phi_dot)**2) + (0.005 * (x_dot**2))
+        #
+        # reward = alive_bonus - dist_penalty - velocity_penalty
 
-        if (
-            x > flag - 0.1 and x < flag + 0.1
-            and x_dot > -0.1 and x_dot < 0.1
-            and theta_dot > -0.05 and theta_dot < 0.05
-            and np.sin(theta) > -0.05 and np.sin(theta) < 0.05
-            and phi_dot > -0.05 and phi_dot < 0.05
-            and np.sin(phi) > -0.05 and np.sin(phi) < 0.05
-        ):
-            reward += 100.0
+        theta = self.state.item(2) % np.pi
+        phi = self.state.item(3) % np.pi
 
-        if(x < -self.x_threshold or x > self.x_threshold):
-            reward -= 100
+        angle_reward = (np.exp(-(theta**2)) + np.exp(-(phi**2))) / 2
+        # angle_reward = np.exp(-max(theta**2, phi**2))
+
+        reward = angle_reward
+
+        terminated = bool(x < -self.x_threshold or x > self.x_threshold)
+        truncated = bool(self.counter >= self.episode_len)
 
         if self.render_mode == 'human':
             img = self.render()
@@ -201,7 +227,8 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         else:
             info = {}
 
-        # print(f"x_tip: {x_tip}  y_tip: {y_tip}  theta: {theta}  phi: {phi}")
+        # print(f"reward: {reward}  x_tip: {x_tip}  y_tip: {y_tip}  theta: {theta}  phi: {phi}")
+        print(f"reward: {reward}  theta: {theta}  phi: {phi}")
 
         return self.state, reward, terminated, truncated, info
 
@@ -220,8 +247,10 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         self.state = np.array([
             np.random.normal(loc=0, scale=0.1),  # theta1_dot
             np.random.normal(loc=0, scale=0.1),  # phi_dot
-            np.random.uniform(low=-0.1, high=0.1),  # theta1
-            np.random.uniform(low=-0.1, high=0.1),  # phi
+            np.random.uniform(low=-np.pi, high=np.pi),  # theta1
+            np.random.uniform(low=-np.pi, high=np.pi),  # phi
+            # np.pi,
+            # np.pi,
             np.random.uniform(low=-0.1, high=0.1),  # x
             np.random.normal(loc=0, scale=0.1),  # x_dot
         ])
