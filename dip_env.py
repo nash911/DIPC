@@ -228,7 +228,7 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
             info = {}
 
         # print(f"reward: {reward}  x_tip: {x_tip}  y_tip: {y_tip}  theta: {theta}  phi: {phi}")
-        print(f"reward: {reward}  theta: {theta}  phi: {phi}")
+        # print(f"reward: {reward}  theta: {theta}  phi: {phi}")
 
         return self.state, reward, terminated, truncated, info
 
