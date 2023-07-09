@@ -19,16 +19,17 @@ def main(args):
     np.random.seed(SEED)
     random.seed(SEED)
 
-    train_env = DoubleInvertedPendulumCartEnv()
+    train_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH)
 
     print(f"env.observation_space.size(): {train_env.observation_space.shape}")
     print(f"env.action_space: {train_env.action_space.shape}")
 
     # Create an additional environment for evaluation
-    eval_env = DoubleInvertedPendulumCartEnv()
+    eval_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH)
 
     # A third environment for final rendering
-    render_env = DoubleInvertedPendulumCartEnv(render_mode='human')
+    render_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH,
+                                               render_mode='human')
 
     # Loss function for optimization - Mean Squared Error loss
     mse_loss = nn.MSELoss()
@@ -70,7 +71,7 @@ if __name__ == '__main__':
     # -----
     REPLAY_MEM_SIZE = 100_000
     INITIAL_PERIOD = 3000
-    EPISODE_LENGTH = 1000
+    EPISODE_LENGTH = 200
 
     # Logging
     # ---------

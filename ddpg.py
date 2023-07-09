@@ -261,7 +261,7 @@ class DDPG():
 
         return action.cpu().numpy()
 
-    def evaluate(self, num_episodes: int = 3, episode_len: int = 1000
+    def evaluate(self, num_episodes: int = 3, episode_len: int = 200
                  ) -> Sequence[Union[int, float]]:
         """
            Method for evaluating policy during training.
@@ -307,7 +307,7 @@ class DDPG():
                         inference=True)
                 observation, reward, terminated, truncated, info = \
                     self.eval_env.step(action)
-                episode_reward += reward
+                episode_reward += (reward/episode_len)
                 episode_length += 1
 
             # Store the cumulative reward and the length of the current episode
@@ -320,7 +320,7 @@ class DDPG():
         return min(episode_rewards), max(episode_lengths)
 
     def final_evaluation(self, num_episodes: int = 10, record: bool = False,
-                         episode_len: int = 1000, record_path: str = 'videos/images/'
+                         episode_len: int = 200, record_path: str = 'videos/images/'
                          ) -> Sequence[float]:
         """
            Method for evaluating the policy at the end of training.
@@ -369,7 +369,7 @@ class DDPG():
                         inference=True)
                 observation, reward, terminated, truncated, info = \
                     self.render_env.step(action)
-                episode_reward += reward
+                episode_reward += (reward/episode_len)
                 episode_length += 1
 
                 # Save the rendered frame as a .png image
@@ -396,7 +396,7 @@ class DDPG():
         return episode_rewards
 
     def train(self, training_steps: int, init_training_period: int, batch_size: int = 32,
-              evaluation_freq: int = 5_000, verbose: bool = True, episode_len: int = 1000,
+              evaluation_freq: int = 5_000, verbose: bool = True, episode_len: int = 200,
               show_plot: bool = False):
         """
            Method for training the policy based with DDQL algorithm.
@@ -470,7 +470,7 @@ class DDPG():
             self.replay_memory.add(state, action, reward, (terminated or truncated))
 
             # Normalized reward
-            episode_reward += reward
+            episode_reward += (reward/episode_len)
 
             # Episode length for plotting
             episode_duration += 1
@@ -531,7 +531,7 @@ class DDPG():
                 # Evaluate the current policy
                 self.actor.eval()
                 min_eval_rewards, max_eval_episodes_length = \
-                    self.evaluate()
+                    self.evaluate(episode_len=episode_len)
                 eval_reward.append(min_eval_rewards)
                 eval_episode_len.append(max_eval_episodes_length)
                 eval_episode_t.append(t)
@@ -545,7 +545,7 @@ class DDPG():
                 if (min_eval_rewards > best_eval_reward):
                     torch.save(self.actor.state_dict(), 'models/best_policy.pth')
                     best_eval_reward = min_eval_rewards
-                    saved_model_txt = f"Best Model Saved @ Timestep {t} with " + \
+                    saved_model_txt = f"Best Model Saved @ Timestep {t+1} with " + \
                         f"eval reward: {np.round(best_eval_reward, 4)}"
 
                 # Save the most recent model as well
