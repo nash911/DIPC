@@ -69,7 +69,7 @@ def plot_ddpg_all(axs, train_t: Sequence[int], actor_loss: Sequence[float],
         axs[0].text(x_min * 1.0, y_max * 1.2, text, fontsize=14, color='Black')
 
     if save:
-        plt.savefig(path + "models/learning_curves.png")
+        plt.savefig(path + "plots/learning_curves.png")
 
     if show:
         plt.show(block=False)
