@@ -28,7 +28,8 @@ def main(args):
                 hl2_size=HL2_SIZE, device=device)
 
     ddpg.load_policy_network(
-        model_path=args.path+('latest_policy.pth' if args.latest else 'best_policy.pth'))
+        model_path=args.path + 'models/' + ('latest_policy.pth' if args.latest else
+                                            'best_policy.pth'))
 
     # Evaluate saved best agent
     _ = ddpg.final_evaluation(num_episodes=10, episode_len=EPISODE_LENGTH)

@@ -245,7 +245,7 @@ class DDPG():
                 target_param.data.copy_(param.data * self.rho +
                                         target_param.data * (1.0 - self.rho))
 
-    def load_policy_network(self, model_path: str = 'models/best_policy.pth') -> None:
+    def load_policy_network(self, model_path) -> None:
         """
            Method to load the actor from saved model file.
         """
@@ -397,7 +397,7 @@ class DDPG():
 
     def train(self, training_steps: int, init_training_period: int, batch_size: int = 32,
               evaluation_freq: int = 5_000, verbose: bool = True, episode_len: int = 200,
-              show_plot: bool = False):
+              show_plot: bool = False, path: str = None):
         """
            Method for training the policy based with DDQL algorithm.
 
@@ -427,9 +427,9 @@ class DDPG():
         # Create a matlibplot canvas for plotting learning curves
         fig, axs = plt.subplots(3, figsize=(10, 11), sharey=False, sharex=True)
 
-        # Create directory to save best evaluation policy
-        if not os.path.isdir('models'):
-            os.makedirs('models')
+        # # Create directory to save best evaluation policy
+        # if not os.path.isdir('models'):
+        #     os.makedirs('models')
 
         # Initialize lists for storing learning curve data
         t_list = list()
@@ -543,20 +543,20 @@ class DDPG():
                 # Save a snapshot of the best policy (main-dqn) based on the
                 # evaluation results
                 if (min_eval_rewards > best_eval_reward):
-                    torch.save(self.actor.state_dict(), 'models/best_policy.pth')
+                    torch.save(self.actor.state_dict(), path + 'models/best_policy.pth')
                     best_eval_reward = min_eval_rewards
                     saved_model_txt = f"Best Model Saved @ Timestep {t+1} with " + \
                         f"eval reward: {np.round(best_eval_reward, 4)}"
 
                 # Save the most recent model as well
-                torch.save(self.actor.state_dict(), 'models/latest_policy.pth')
+                torch.save(self.actor.state_dict(), path + 'models/latest_policy.pth')
 
                 # Plot loss, rewards, and transition percentage
                 plot_ddpg_all(
                     axs, t_list, actor_losses, critic_losses, train_reward,
                     train_episode_t, eval_reward, eval_episode_t, show=show_plot,
                     save=True, text=saved_model_txt, train_episode_len=train_episode_len,
-                    eval_episode_len=eval_episode_len)
+                    eval_episode_len=eval_episode_len, path=path)
 
                 self.actor.train()
 
@@ -575,10 +575,7 @@ class DDPG():
         print("\nTraining Time: %.2f(s)" % (end_time - start_time))
         input("Completed training.\nPress Enter to start the final evaluation")
 
-        if best_eval_reward > -200:
-            self.actor.load_state_dict(torch.load('models/best_policy.pth'))
-        else:  # Save the final policy as the best policy
-            torch.save(self.actor.state_dict(), 'models/best_policy.pth')
+        self.actor.load_state_dict(torch.load(path + 'models/best_policy.pth'))
 
         self.actor.eval()
-        _ = self.final_evaluation(num_episodes=20)
+        _ = self.final_evaluation(num_episodes=10)

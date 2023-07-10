@@ -9,7 +9,7 @@ def plot_ddpg_all(axs, train_t: Sequence[int], actor_loss: Sequence[float],
                   train_episode_t: Sequence[int], eval_reward: Sequence[float],
                   eval_episode_t: Sequence[int], train_episode_len: Sequence[int],
                   eval_episode_len: Sequence[int], text: str = None, show: bool = False,
-                  save: bool = False) -> None:
+                  save: bool = False, path: str = None) -> None:
     """
        Method for plotting learning curves during policy training.
 
@@ -69,7 +69,7 @@ def plot_ddpg_all(axs, train_t: Sequence[int], actor_loss: Sequence[float],
         axs[0].text(x_min * 1.0, y_max * 1.2, text, fontsize=14, color='Black')
 
     if save:
-        plt.savefig("models/learning_curves.png")
+        plt.savefig(path + "models/learning_curves.png")
 
     if show:
         plt.show(block=False)

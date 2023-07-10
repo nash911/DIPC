@@ -1,6 +1,10 @@
 import numpy as np
 import random
 import argparse
+import os
+
+from datetime import datetime
+from shutil import rmtree
 
 import torch
 import torch.nn as nn
@@ -18,6 +22,24 @@ def main(args):
     torch.manual_seed(SEED)
     np.random.seed(SEED)
     random.seed(SEED)
+
+    # Create a timestamp directory to save model, parameter and log files
+    train_path = \
+        ('training/DDPG/' + str(datetime.now().date()) + '_' +
+         str(datetime.now().hour).zfill(2) + '-' + str(datetime.now().minute).zfill(2) +
+         '/')
+
+    # Delete if a directory with the same name already exists
+    if os.path.exists(train_path):
+        rmtree(train_path)
+
+    # Create empty directories for saving model, parameter and log files
+    os.makedirs(train_path)
+
+    # Create a directory for storing training model and results
+    os.makedirs(train_path + 'plots')
+    os.makedirs(train_path + 'learning')
+    os.makedirs(train_path + 'models')
 
     train_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH)
 
@@ -44,7 +66,7 @@ def main(args):
     dqn.train(
         training_steps=args.max_train_steps, init_training_period=INITIAL_PERIOD,
         batch_size=BATCH_SIZE, evaluation_freq=EVALUATION_FREQUENCY, verbose=args.verbose,
-        episode_len=EPISODE_LENGTH, show_plot=args.plot)
+        episode_len=EPISODE_LENGTH, show_plot=args.plot, path=train_path)
 
 
 if __name__ == '__main__':
