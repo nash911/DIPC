@@ -317,7 +317,7 @@ class DDPG():
         # Reset the evaluation environment before exiting evaluation
         observation, info = self.eval_env.reset()
 
-        return min(episode_rewards), max(episode_lengths)
+        return np.mean(episode_rewards), min(episode_lengths)
 
     def final_evaluation(self, num_episodes: int = 10, record: bool = False,
                          episode_len: int = 200, record_path: str = 'videos/images/'

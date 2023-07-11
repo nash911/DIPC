@@ -85,9 +85,9 @@ if __name__ == '__main__':
 
     # NN
     # ----
-    HL1_SIZE = 64#48
-    HL2_SIZE = 64#48
-    BATCH_SIZE = 32
+    HL1_SIZE = 128#64#48
+    HL2_SIZE = 128#64#48
+    BATCH_SIZE = 64#32
 
     # DQL
     # -----

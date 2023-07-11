@@ -48,7 +48,7 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         # self.seed()
         # self.state = None #arr2mat
         self.steps_beyond_done = None
-        self.x_threshold = 1.0
+        self.x_threshold = 1.5 #1.0
 
         # Observation space and limits
         self.x_min = -(self.x_threshold * 2)
@@ -60,12 +60,10 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
         self.min_observation = np.array([
             self.velocity_min, self.velocity_min, self.theta_min, self.theta_min,
-            # 0, 0, 0, 0,
             self.x_min, self.velocity_min], dtype=np.float32)
 
         self.max_observation = np.array([
             self.velocity_max, self.velocity_max, self.theta_max, self.theta_max,
-            # 1, 1, 1, 1,
             self.x_max, self.velocity_max], dtype=np.float32)
 
         self.observation_space = spaces.Box(low=self.min_observation,
@@ -99,20 +97,21 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
         self.max_x_vel = -np.inf
         self.max_joint_vel = -np.inf
-        self.vel_threshold = 40.0#35.0
-        self.normalizer = \
-            np.array([[self.vel_threshold, self.vel_threshold, np.pi, np.pi, 1, 1]])
-
+        self.vel_threshold = 300#200#40.0#35.0
+        self.normalizer = np.array([self.vel_threshold, self.vel_threshold,
+                                    np.pi, np.pi,
+                                    self.x_threshold, 1])
 
     def step(self, action):
         state = self.state
-        action = np.clip(action, -1.0, 1.0)
-        theta_dot = state.item(0)
-        phi_dot = state.item(1)
-        theta = state.item(2)
-        phi = state.item(3)
-        x = state.item(4)
-        x_dot = state.item(5)
+        action = np.clip(action, -1.0, 1.0) * 10
+
+        # theta_dot = state.item(0)
+        # phi_dot = state.item(1)
+        # theta = state.item(2)
+        # phi = state.item(3)
+        # x = state.item(4)
+        # x_dot = state.item(5)
 
         u = action
         self.counter += 1
@@ -173,55 +172,14 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         self.state = (np.reshape(self.state, (6, 1)) + self.tau1 * state_dot_new)
         self.state = np.squeeze(self.state)
 
-        flag = self.x_goal_position
+        # flag = self.x_goal_position
 
-
-
-        # reward = 0
-        # alive_bonus = 10
-        # x_tip = (x + self.pendulum_length_1 * np.sin(theta) +
-        #          self.pendulum_length_2 * np.sin(phi))
-        # y_tip = (self.pendulum_length_1 * np.cos(theta) +
-        #          self.pendulum_length_2 * np.cos(phi))
-        #
-        # dist_penalty = ((0.01 * (x_tip - flag)**2) + ((((y_tip - 0.464)))**2) +
-        #                 0.5 * (1 - np.exp(-1 * (0.5 * (0.5**2 * ((x - flag)**2))))))
-        # velocity_penalty = \
-        #     (0.001 * (theta_dot**2)) + (0.001 * (phi_dot)**2) + (0.005 * (x_dot**2))
-        #
-        # reward = alive_bonus - dist_penalty - velocity_penalty
-        #
-        # terminated = bool(x < -self.x_threshold or x > self.x_threshold or
-        #                   theta > 90*2*np.pi/360 or theta < -90*2*np.pi/360)
-        # truncated = bool(self.counter >= self.episode_len)
-        #
-        # if (
-        #     x > flag - 0.1 and x < flag + 0.1
-        #     and x_dot > -0.1 and x_dot < 0.1
-        #     and theta_dot > -0.05 and theta_dot < 0.05
-        #     and np.sin(theta) > -0.05 and np.sin(theta) < 0.05
-        #     and phi_dot > -0.05 and phi_dot < 0.05
-        #     and np.sin(phi) > -0.05 and np.sin(phi) < 0.05
-        # ):
-        #     reward += 100.0
-        #
-        # if(x < -self.x_threshold or x > self.x_threshold):
-        #     reward -= 100
-        #
-        # dist_penalty = ((0.01 * (x_tip - flag)**2) + ((((y_tip - 0.464)))**2) +
-        #                 0.5 * (1 - np.exp(-1 * (0.5 * (0.5**2 * ((x - flag)**2))))))
-        # velocity_penalty = \
-        #     (0.001 * (theta_dot**2)) + (0.001 * (phi_dot)**2) + (0.005 * (x_dot**2))
-        #
-        # reward = alive_bonus - dist_penalty - velocity_penalty
-
-
-
+        theta_dot = self.state.item(0)
+        phi_dot = self.state.item(1)
         theta = normalize_angle(self.state.item(2))
         phi = normalize_angle(self.state.item(3))
-
-        # self.state[0, 2] = theta
-        # self.state[0, 3] = phi
+        x = state.item(4)
+        # x_dot = state.item(5)
 
         # angle_reward = (np.exp(-(theta**2)) + np.exp(-(phi**2))) / 2
         # angle_reward = np.exp(-max(theta**2, phi**2))
@@ -235,14 +193,11 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         # y_tip_reward = np.exp(-5*np.abs(y_tip - 0.484))
         # reward = y_tip_reward
 
-        theta_dot = self.state.item(0)
-        phi_dot = self.state.item(1)
-
         terminated = bool(x < -self.x_threshold or x > self.x_threshold)
         terminated = terminated or bool(np.abs(theta_dot) > self.vel_threshold or
                                         np.abs(phi_dot) > self.vel_threshold)
-        truncated = bool(self.counter >= self.episode_len)
 
+        truncated = bool(self.counter >= self.episode_len)
 
         if self.render_mode == 'human':
             img = self.render()
@@ -266,9 +221,8 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         #     print(f"max_x_vel: {self.max_x_vel} -- max_joint_vel: {self.max_joint_vel}")
 
         # Normalize state
-        norm_state = np.array([self.state.item(0), self.state.item(1),
-                               theta, phi,
-                               self.state.item(5), self.state.item(5)]) / self.normalizer
+        norm_state = np.array([self.state.item(0), self.state.item(1), theta, phi,
+                               self.state.item(4), self.state.item(5)]) / self.normalizer
 
         return norm_state, reward, terminated, truncated, info
 

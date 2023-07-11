@@ -38,8 +38,8 @@ def main(args):
 if __name__ == '__main__':
     # NN
     # ----
-    HL1_SIZE = 64#48
-    HL2_SIZE = 64#48
+    HL1_SIZE = 128#64#48
+    HL2_SIZE = 128#64#48
 
     EPISODE_LENGTH = 200
 
