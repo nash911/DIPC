@@ -60,10 +60,12 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
         self.min_observation = np.array([
             self.velocity_min, self.velocity_min, self.theta_min, self.theta_min,
+            # 0, 0, 0, 0,
             self.x_min, self.velocity_min], dtype=np.float32)
 
         self.max_observation = np.array([
             self.velocity_max, self.velocity_max, self.theta_max, self.theta_max,
+            # 1, 1, 1, 1,
             self.x_max, self.velocity_max], dtype=np.float32)
 
         self.observation_space = spaces.Box(low=self.min_observation,
@@ -255,7 +257,7 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
         # print(f"action: {np.round(action[0], 4)}  reward: {np.round(reward, 4)}  " +
         #       f"theta_dot: {np.round(theta_dot, 4)}  phi_dot: {np.round(phi_dot, 4)}  " +
-        #       f"theta: {np.round(theta, 4)}  phi: {np.round(phi, 4)}")
+        #       f"theta: {np.round(self.state.item(2), 4)}  phi: {np.round(self.state.item(3), 4)}")
         # input()
 
         # self.max_x_vel = max(self.max_x_vel, self.state[0, 5])
@@ -264,23 +266,15 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         #     print(f"max_x_vel: {self.max_x_vel} -- max_joint_vel: {self.max_joint_vel}")
 
         # Normalize state
-        norm_state = self.state / self.normalizer
+        norm_state = np.array([self.state.item(0), self.state.item(1),
+                               theta, phi,
+                               self.state.item(5), self.state.item(5)]) / self.normalizer
 
         return norm_state, reward, terminated, truncated, info
 
     def reset(self, seed=None):
         if seed is not None:
             np.random.seed(seed)
-
-        # # Reset the state
-        # self.state = np.array([
-        #     np.random.uniform(low=0, high=0),  # theta1_dot
-        #     np.random.uniform(low=0, high=0),  # phi_dot
-        #     np.random.uniform(low= 0, high= 0),  # theta1
-        #     np.random.uniform(low= 0, high= 0),  # phi
-        #     np.random.uniform(low=0, high= 0),  # x
-        #     np.random.uniform(low=0, high=0),  # x_dot
-        # ])
 
         # Reset the state
         self.state = np.array([
