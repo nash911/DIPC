@@ -95,6 +95,13 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
                    self.pendulum_mass_2 * self.pendulum_length_1 * self.gravity)
         self.h8 = self.pendulum_mass_2 * self.pendulum_cg_2 * self.gravity
 
+        self.max_x_vel = -np.inf
+        self.max_joint_vel = -np.inf
+        self.vel_threshold = 40.0#35.0
+        self.normalizer = \
+            np.array([[self.vel_threshold, self.vel_threshold, np.pi, np.pi, 1, 1]])
+
+
     def step(self, action):
         state = self.state
         action = np.clip(action, -1.0, 1.0)
@@ -208,24 +215,31 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
 
 
-        # theta = self.state.item(2) % np.pi
-        # phi = self.state.item(3) % np.pi
-        #
+        theta = normalize_angle(self.state.item(2))
+        phi = normalize_angle(self.state.item(3))
+
+        # self.state[0, 2] = theta
+        # self.state[0, 3] = phi
+
         # angle_reward = (np.exp(-(theta**2)) + np.exp(-(phi**2))) / 2
-        # # angle_reward = np.exp(-max(theta**2, phi**2))
-        #
-        # reward = angle_reward
+        # angle_reward = np.exp(-max(theta**2, phi**2))
+        angle_reward = np.exp(-(theta+phi))
 
-        y_tip = (self.pendulum_length_1 * np.cos(theta) +
-                 self.pendulum_length_2 * np.cos(phi))
+        reward = angle_reward
 
-        y_tip_reward = np.exp(-5*np.abs(y_tip - 0.484))
-        reward = y_tip_reward
+        # y_tip = (self.pendulum_length_1 * np.cos(theta) +
+        #          self.pendulum_length_2 * np.cos(phi))
+
+        # y_tip_reward = np.exp(-5*np.abs(y_tip - 0.484))
+        # reward = y_tip_reward
+
+        theta_dot = self.state.item(0)
+        phi_dot = self.state.item(1)
 
         terminated = bool(x < -self.x_threshold or x > self.x_threshold)
+        terminated = terminated or bool(np.abs(theta_dot) > self.vel_threshold or
+                                        np.abs(phi_dot) > self.vel_threshold)
         truncated = bool(self.counter >= self.episode_len)
-
-
 
 
         if self.render_mode == 'human':
@@ -236,14 +250,28 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
         # x_tip = (x + self.pendulum_length_1 * np.sin(theta) +
         #          self.pendulum_length_2 * np.sin(phi))
-        # print(f"action: {action}  reward: {reward}  x_tip: {x_tip}  y_tip: {y_tip}  theta: {theta}  phi: {phi}")
-        #
-        # # print(f"reward: {reward}  theta: {theta}  phi: {phi}")
+        # y_tip = (self.pendulum_length_1 * np.cos(theta) +
+        #          self.pendulum_length_2 * np.cos(phi))
+
+        # print(f"action: {np.round(action[0], 4)}  reward: {np.round(reward, 4)}  " +
+        #       f"theta_dot: {np.round(theta_dot, 4)}  phi_dot: {np.round(phi_dot, 4)}  " +
+        #       f"theta: {np.round(theta, 4)}  phi: {np.round(phi, 4)}")
         # input()
 
-        return self.state, reward, terminated, truncated, info
+        # self.max_x_vel = max(self.max_x_vel, self.state[0, 5])
+        # self.max_joint_vel = max(self.max_joint_vel, max(theta_dot, phi_dot))
+        # if terminated or truncated:
+        #     print(f"max_x_vel: {self.max_x_vel} -- max_joint_vel: {self.max_joint_vel}")
+
+        # Normalize state
+        norm_state = self.state / self.normalizer
+
+        return norm_state, reward, terminated, truncated, info
 
     def reset(self, seed=None):
+        if seed is not None:
+            np.random.seed(seed)
+
         # # Reset the state
         # self.state = np.array([
         #     np.random.uniform(low=0, high=0),  # theta1_dot
