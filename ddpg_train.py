@@ -131,7 +131,7 @@ if __name__ == '__main__':
     # Environment
     # -----------
     SEED = 0
-    EPISODE_LENGTH = 500
+    EPISODE_LENGTH = 200#500
     ACTION_SCALER = 30.0
     GRAVITY_CONST = -9.81
     FIXED_INIT = False

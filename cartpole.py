@@ -150,12 +150,17 @@ class DIPCEnv(gym.Env):
         theta_dot = state.item(4)
         phi_dot = state.item(5)
 
-        angle_reward = np.exp(-(theta+phi))
-        reward = angle_reward
-
         terminated = bool(x < -self.x_threshold or x > self.x_threshold)
         # terminated = terminated or bool(np.abs(theta_dot) > self.vel_threshold or
         #                                 np.abs(phi_dot) > self.vel_threshold)
+
+        # angle_reward = np.exp(-(theta+phi))
+        # reward = angle_reward
+
+        reward = -(theta**2 + phi**2 + (0.1 * theta_dot**2) + (0.1 * phi_dot**2) +
+                   (0.001 * action**2))
+        if terminated:
+            reward += -1000
 
         truncated = bool(self.counter >= self.episode_len)
 
