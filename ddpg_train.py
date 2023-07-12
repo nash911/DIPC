@@ -97,18 +97,18 @@ if __name__ == '__main__':
     # ----
     HL1_SIZE = 128#64#48
     HL2_SIZE = 128#64#48
-    BATCH_SIZE = 64#32
+    BATCH_SIZE = 32
 
     # DQL
     # -----
-    REPLAY_MEM_SIZE = 300_000
+    REPLAY_MEM_SIZE = 100_000
     INITIAL_PERIOD = 3000
-    EPISODE_LENGTH = 1000
-    ACTION_SCALER = 1.0
+    EPISODE_LENGTH = 500
+    ACTION_SCALER = 40.0
 
     # Logging
     # ---------
-    EVALUATION_FREQUENCY = 10_000
+    EVALUATION_FREQUENCY = 5_000
 
     parser = argparse.ArgumentParser(description='DDPG Training for DIPCart Task')
     parser.add_argument('--max_train_steps', type=int, default=2_000_000,

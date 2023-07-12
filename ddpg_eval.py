@@ -44,8 +44,8 @@ if __name__ == '__main__':
     HL1_SIZE = 128#64#48
     HL2_SIZE = 128#64#48
 
-    ACTION_SCALER = 1.0
-    EPISODE_LENGTH = 1000
+    ACTION_SCALER = 40.0
+    EPISODE_LENGTH = 500
     FIXED_INIT = False
 
     parser = argparse.ArgumentParser(description='DDPG Evaluation for DIPCart Task')
