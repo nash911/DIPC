@@ -131,7 +131,7 @@ if __name__ == '__main__':
     # -----------
     SEED = 0
     EPISODE_LENGTH = 500
-    ACTION_SCALER = 60.0
+    ACTION_SCALER = 30.0
     FIXED_INIT = False
 
     # Adam
