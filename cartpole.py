@@ -71,7 +71,7 @@ class DIPCEnv(gym.Env):
                                        shape=(1,),
                                        dtype=np.float32)
 
-        self.vel_threshold = 300#200#40.0#35.0
+        self.vel_threshold = 1#300#200#40.0#35.0
         self.normalizer = np.array([self.x_threshold, np.pi, np.pi,
                                     1, self.vel_threshold, self.vel_threshold])
 
@@ -139,8 +139,8 @@ class DIPCEnv(gym.Env):
         reward = angle_reward
 
         terminated = bool(x < -self.x_threshold or x > self.x_threshold)
-        terminated = terminated or bool(np.abs(theta_dot) > self.vel_threshold or
-                                        np.abs(phi_dot) > self.vel_threshold)
+        # terminated = terminated or bool(np.abs(theta_dot) > self.vel_threshold or
+        #                                 np.abs(phi_dot) > self.vel_threshold)
 
         truncated = bool(self.counter >= self.episode_len)
 

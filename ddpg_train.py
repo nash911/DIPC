@@ -2,6 +2,7 @@ import numpy as np
 import random
 import argparse
 import os
+import json
 
 from datetime import datetime
 from shutil import rmtree
@@ -14,12 +15,51 @@ from cartpole import DIPCEnv
 from ddpg import DDPG
 
 
+# Saves the parameters above in separate file for reference
+def save_learning_params(max_train_steps):
+    learning_params = dict()
+
+    # Environment
+    # -----------
+    learning_params['seed'] = SEED
+    learning_params['episode_len'] = EPISODE_LENGTH
+    learning_params['action_scaler'] = ACTION_SCALER
+    learning_params['fixed_init'] = FIXED_INIT
+
+    # Adam
+    # ----
+    learning_params['actor_lr'] = ACTOR_LR
+    learning_params['critic_lr'] = CRITIC_LR
+    learning_params['beta_1'] = BETA_1
+    learning_params['beta_2'] = BETA_2
+
+    # DDPG
+    # -----
+    learning_params['gamma'] = GAMMA
+    learning_params['rho'] = RHO
+    learning_params['stdev'] = STDEV
+    learning_params['replay_mem_size'] = REPLAY_MEM_SIZE
+    learning_params['initial_period'] = INITIAL_PERIOD
+
+    # NN
+    # ----
+    learning_params['hl1_size'] = HL1_SIZE
+    learning_params['hl2_size'] = HL2_SIZE
+    learning_params['batch_size'] = BATCH_SIZE
+
+    # Training
+    # --------
+    learning_params['max_train_steps'] = max_train_steps
+    learning_params['eval_freq'] = EVALUATION_FREQUENCY
+
+    return learning_params
+
+
 def main(args):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Set random generator seed
-    SEED = 0
     torch.manual_seed(SEED)
     np.random.seed(SEED)
     random.seed(SEED)
@@ -72,6 +112,13 @@ def main(args):
                critic_lr=CRITIC_LR, replay_mem_size=REPLAY_MEM_SIZE, hl1_size=HL1_SIZE,
                hl2_size=HL2_SIZE, device=device)
 
+    # Save the learning parameters for reference
+    learning_params = save_learning_params(args.max_train_steps)
+
+    # Dump learning params to file
+    with open(train_path + 'learning/params.dat', 'w') as jf:
+        json.dump(learning_params, jf, indent=4)
+
     # Train the agent
     dqn.train(
         training_steps=args.max_train_steps, init_training_period=INITIAL_PERIOD,
@@ -80,6 +127,13 @@ def main(args):
 
 
 if __name__ == '__main__':
+    # Environment
+    # -----------
+    SEED = 0
+    EPISODE_LENGTH = 500
+    ACTION_SCALER = 60.0
+    FIXED_INIT = False
+
     # Adam
     # ------
     ACTOR_LR = 0.001
@@ -95,16 +149,15 @@ if __name__ == '__main__':
 
     # NN
     # ----
-    HL1_SIZE = 128#64#48
-    HL2_SIZE = 128#64#48
+    HL1_SIZE = 64#128#64#48
+    HL2_SIZE = 64#128#64#48
     BATCH_SIZE = 32
 
     # DQL
     # -----
     REPLAY_MEM_SIZE = 100_000
     INITIAL_PERIOD = 3000
-    EPISODE_LENGTH = 500
-    ACTION_SCALER = 40.0
+
 
     # Logging
     # ---------
