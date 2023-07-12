@@ -170,7 +170,7 @@ class DIPCEnv(gym.Env):
         #     np.array([self.state.item(0), self.state.item(1), theta, phi,
         #               self.state.item(4), self.state.item(5)]) / self.normalizer
         norm_state = \
-            np.array([x, theta, phi, x_dot, theta_dot, phi_dot) / self.normalizer
+            np.array([x, theta, phi, x_dot, theta_dot, phi_dot]) / self.normalizer
 
         return norm_state, reward, terminated, truncated, info
 

@@ -219,7 +219,7 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         #     np.array([self.state.item(0), self.state.item(1), theta, phi,
         #               self.state.item(4), self.state.item(5)]) / self.normalizer
         norm_state = \
-            np.array([x, theta, phi, x_dot, theta_dot, phi_dot) / self.normalizer
+            np.array([theta_dot, phi_dot, theta, phi, x, x_dot]) / self.normalizer
 
         return norm_state, reward, terminated, truncated, info
 
@@ -229,11 +229,11 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
         # Reset the state
         self.state = np.array([
-            np.random.normal(loc=0, scale=0.1),  # theta1_dot
+            np.random.normal(loc=0, scale=0.1),  # theta_dot
             np.random.normal(loc=0, scale=0.1),  # phi_dot
-            # np.random.uniform(low=-np.pi, high=np.pi),  # theta1
+            # np.random.uniform(low=-np.pi, high=np.pi),  # theta
             # np.random.uniform(low=-np.pi, high=np.pi),  # phi
-            np.random.uniform(low=-np.pi-0.314, high=-np.pi+0.314),  # theta1
+            np.random.uniform(low=-np.pi-0.314, high=-np.pi+0.314),  # theta
             np.random.uniform(low=-np.pi-0.314, high=-np.pi+0.314),  # phi
             # 0, 0,
             # -np.pi, -np.pi,
