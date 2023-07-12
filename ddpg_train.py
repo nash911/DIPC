@@ -42,22 +42,23 @@ def main(args):
     os.makedirs(train_path + 'learning')
     os.makedirs(train_path + 'models')
 
-    # train_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH)
+    # train_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER)
     #
     # # Create an additional environment for evaluation
-    # eval_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH)
+    # eval_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER)
     #
     # # A third environment for final rendering
-    # render_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH,
+    # render_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER,
     #                                            render_mode='human')
 
-    train_env = DIPCEnv(episode_len=EPISODE_LENGTH)
+    train_env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER)
 
     # Create an additional environment for evaluation
-    eval_env = DIPCEnv(episode_len=EPISODE_LENGTH)
+    eval_env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER)
 
     # A third environment for final rendering
-    render_env = DIPCEnv(episode_len=EPISODE_LENGTH, render_mode='human')
+    render_env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER,
+                         render_mode='human')
 
     print(f"env.observation_space.size(): {train_env.observation_space.shape}")
     print(f"env.action_space: {train_env.action_space.shape}")
@@ -100,13 +101,14 @@ if __name__ == '__main__':
 
     # DQL
     # -----
-    REPLAY_MEM_SIZE = 100_000
+    REPLAY_MEM_SIZE = 300_000
     INITIAL_PERIOD = 3000
-    EPISODE_LENGTH = 200
+    EPISODE_LENGTH = 1000
+    ACTION_SCALER = 1.0
 
     # Logging
     # ---------
-    EVALUATION_FREQUENCY = 5_000
+    EVALUATION_FREQUENCY = 10_000
 
     parser = argparse.ArgumentParser(description='DDPG Training for DIPCart Task')
     parser.add_argument('--max_train_steps', type=int, default=2_000_000,

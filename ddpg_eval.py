@@ -19,8 +19,8 @@ def main(args):
     np.random.seed(SEED)
     random.seed(SEED)
 
-    # env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, render_mode='human')
-    env = DIPCEnv(episode_len=EPISODE_LENGTH, render_mode='human')
+    # env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER, render_mode='human')
+    env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER, render_mode='human')
 
     print(f"env.observation_space: {env.observation_space.shape}")
     print(f"env.action_space.shape: {env.action_space.shape}")
@@ -44,7 +44,8 @@ if __name__ == '__main__':
     HL1_SIZE = 128#64#48
     HL2_SIZE = 128#64#48
 
-    EPISODE_LENGTH = 200
+    ACTION_SCALER = 1.0
+    EPISODE_LENGTH = 1000
     FIXED_INIT = False
 
     parser = argparse.ArgumentParser(description='DDPG Evaluation for DIPCart Task')
