@@ -23,9 +23,13 @@ def main(args):
     np.random.seed(params['seed'])
     random.seed(params['seed'])
 
-    # env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER, render_mode='human')
-    env = DIPCEnv(episode_len=params['episode_len'], render_mode='human',
-                  action_scaler=params['action_scaler'])
+    # env = DoubleInvertedPendulumCartEnv(
+    #     episode_len=params['episode_len'], action_scaler=params['action_scaler'],
+    #     gravity=params['gravity_const'], render_mode='human')
+    env = DIPCEnv(episode_len=params['episode_len'],
+                  gravity=params.get('gravity_const', -9.81),
+                  action_scaler=params['action_scaler'],
+                  render_mode='human')
 
     print(f"env.observation_space: {env.observation_space.shape}")
     print(f"env.action_space.shape: {env.action_space.shape}")

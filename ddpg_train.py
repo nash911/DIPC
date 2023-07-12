@@ -24,6 +24,7 @@ def save_learning_params(max_train_steps):
     learning_params['seed'] = SEED
     learning_params['episode_len'] = EPISODE_LENGTH
     learning_params['action_scaler'] = ACTION_SCALER
+    learning_params['gravity_const'] = GRAVITY_CONST
     learning_params['fixed_init'] = FIXED_INIT
 
     # Adam
@@ -82,22 +83,22 @@ def main(args):
     os.makedirs(train_path + 'learning')
     os.makedirs(train_path + 'models')
 
-    # train_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER)
+    # train_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER, gravity=GRAVITY_CONST)
     #
     # # Create an additional environment for evaluation
-    # eval_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER)
+    # eval_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER, gravity=GRAVITY_CONST)
     #
     # # A third environment for final rendering
-    # render_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER,
+    # render_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER, gravity=GRAVITY_CONST,
     #                                            render_mode='human')
 
-    train_env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER)
+    train_env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER, gravity=GRAVITY_CONST)
 
     # Create an additional environment for evaluation
-    eval_env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER)
+    eval_env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER, gravity=GRAVITY_CONST)
 
     # A third environment for final rendering
-    render_env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER,
+    render_env = DIPCEnv(episode_len=EPISODE_LENGTH, action_scaler=ACTION_SCALER, gravity=GRAVITY_CONST,
                          render_mode='human')
 
     print(f"env.observation_space.size(): {train_env.observation_space.shape}")
@@ -132,6 +133,7 @@ if __name__ == '__main__':
     SEED = 0
     EPISODE_LENGTH = 500
     ACTION_SCALER = 30.0
+    GRAVITY_CONST = -9.81
     FIXED_INIT = False
 
     # Adam

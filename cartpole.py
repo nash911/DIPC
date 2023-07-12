@@ -15,7 +15,7 @@ cos = np.cos
 
 
 class DIPCEnv(gym.Env):
-    def __init__(self, episode_len, action_scaler=1, render_mode=None):
+    def __init__(self, episode_len, action_scaler=1, gravity=-9.81, render_mode=None):
         # # Original
         # self.g = -9.81  # gravity constant
         # self.m0 = 1.0  # mass of cart
@@ -29,7 +29,7 @@ class DIPCEnv(gym.Env):
         # self.plt_ylim = (-2.5, 2.5,)
 
         # George's
-        self.g = -9.81 #???? # gravity constant
+        self.g = gravity
         self.m0 = 0.5  # mass of cart
         self.m1 = 0.162  # mass of pole 1
         self.m2 = 0.203  # mass of pole 2
