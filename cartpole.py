@@ -16,17 +16,30 @@ cos = np.cos
 
 class DIPCEnv(gym.Env):
     def __init__(self, episode_len, action_scaler=1, render_mode=None):
-        self.g = -9.81  # gravity constant
-        self.m0 = 1.0  # mass of cart
-        self.m1 = 0.5  # mass of pole 1
-        self.m2 = 0.5  # mass of pole 2
-        self.L1 = 1  # length of pole 1
-        self.L2 = 1  # length of pole 2
+        # # Original
+        # self.g = -9.81  # gravity constant
+        # self.m0 = 1.0  # mass of cart
+        # self.m1 = 0.5  # mass of pole 1
+        # self.m2 = 0.5  # mass of pole 2
+        # self.L1 = 1  # length of pole 1
+        # self.L2 = 1  # length of pole 2
+        # self.tau = 0.02  # seconds between state updates
+        # self.x_threshold = 2.4
+
+        # George's
+        self.g = -9.81 #???? # gravity constant
+        self.m0 = 0.5  # mass of cart
+        self.m1 = 0.162  # mass of pole 1
+        self.m2 = 0.203  # mass of pole 2
+        self.L1 = 0.170  # length of pole 1
+        self.L2 = 0.314  # length of pole 2
+        self.tau = 0.0395  # seconds between state updates
+        self.x_threshold = 1.0
+
         self.l1 = self.L1/2  # distance from pivot point to center of mass
         self.l2 = self.L2/2  # distance from pivot point to center of mass
-        self.I1 = self.m1 * (self.L1 ^ 2)/12  # moment of inertia of pole 1 w.r.t its COM
-        self.I2 = self.m2 * (self.L2 ^ 2)/12  # moment of inertia of pole 2 w.r.t its COM
-        self.tau = 0.02  # seconds between state updates
+        self.I1 = self.m1 * (self.L1**2)/12  # moment of inertia of pole 1 w.r.t its COM
+        self.I2 = self.m2 * (self.L2**2)/12  # moment of inertia of pole 2 w.r.t its COM
 
         self.d1 = self.m0 + self.m1 + self.m2
         self.d2 = (self.m1 * self.l1) + (self.m2 * self.L1)
@@ -41,8 +54,6 @@ class DIPCEnv(gym.Env):
         self.episode_len = episode_len
         self.action_scaler = action_scaler
         self.render_mode = render_mode
-
-        self.x_threshold = 2.4
 
         # Observation space and limits
         self.x_min = -(self.x_threshold * 2)
@@ -199,8 +210,10 @@ class DIPCEnv(gym.Env):
 
     def render(self, return_image=True):
         plt.cla()
-        plt.xlim(-3, 3)
-        plt.ylim(-2.5, 2.5)
+        # plt.xlim(-3, 3)
+        # plt.ylim(-2.5, 2.5)
+        plt.xlim(-2, 2)
+        plt.ylim(-1, 1)
 
         cart_width = 0.02
         cart_height = 0.02
