@@ -292,7 +292,7 @@ class DDPG():
 
         # Evaluate the current policy num_episodes number of times
         for episode in range(num_episodes):
-            observation, info = self.eval_env.reset(seed=episode)
+            observation, info = self.eval_env.reset(seed=episode, fixed_init=True)
 
             terminated = truncated = False
             episode_reward = 0
@@ -320,8 +320,8 @@ class DDPG():
         return np.mean(episode_rewards), min(episode_lengths)
 
     def final_evaluation(self, num_episodes: int = 10, record: bool = False,
-                         episode_len: int = 200, record_path: str = 'videos/images/'
-                         ) -> Sequence[float]:
+                         episode_len: int = 200, record_path: str = 'videos/images/',
+                         fixed_init=False) -> Sequence[float]:
         """
            Method for evaluating the policy at the end of training.
 
@@ -348,7 +348,7 @@ class DDPG():
         episode_rewards = list()
         episode_lengths = list()
         for e in range(num_episodes):
-            observation, info = self.render_env.reset(seed=e)
+            observation, info = self.render_env.reset(seed=e, fixed_init=fixed_init)
 
             # # Save the rendered frame as a .png image
             # if record:
@@ -578,4 +578,4 @@ class DDPG():
         self.actor.load_state_dict(torch.load(path + 'models/best_policy.pth'))
 
         self.actor.eval()
-        _ = self.final_evaluation(num_episodes=10)
+        _ = self.final_evaluation(num_episodes=10, fixed_init=True)

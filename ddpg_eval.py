@@ -5,6 +5,7 @@ import argparse
 import random
 
 from dip_env import DoubleInvertedPendulumCartEnv
+from cartpole import DIPCEnv
 from ddpg import DDPG
 
 
@@ -18,7 +19,8 @@ def main(args):
     np.random.seed(SEED)
     random.seed(SEED)
 
-    env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, render_mode='human')
+    # env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH, render_mode='human')
+    env = DIPCEnv(episode_len=EPISODE_LENGTH, render_mode='human')
 
     print(f"env.observation_space: {env.observation_space.shape}")
     print(f"env.action_space.shape: {env.action_space.shape}")
@@ -32,7 +34,8 @@ def main(args):
                                             'best_policy.pth'))
 
     # Evaluate saved best agent
-    _ = ddpg.final_evaluation(num_episodes=10, episode_len=EPISODE_LENGTH)
+    _ = ddpg.final_evaluation(num_episodes=10, episode_len=EPISODE_LENGTH,
+                              fixed_init=True)
 
 
 if __name__ == '__main__':
@@ -42,6 +45,7 @@ if __name__ == '__main__':
     HL2_SIZE = 128#64#48
 
     EPISODE_LENGTH = 200
+    FIXED_INIT = False
 
     parser = argparse.ArgumentParser(description='DDPG Evaluation for DIPCart Task')
     parser.add_argument('--path', type=str, default='models/',

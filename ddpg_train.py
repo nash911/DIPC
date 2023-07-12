@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 
 from dip_env import DoubleInvertedPendulumCartEnv
+from cartpole import DIPCEnv
 from ddpg import DDPG
 
 
@@ -41,17 +42,25 @@ def main(args):
     os.makedirs(train_path + 'learning')
     os.makedirs(train_path + 'models')
 
-    train_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH)
+    # train_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH)
+    #
+    # # Create an additional environment for evaluation
+    # eval_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH)
+    #
+    # # A third environment for final rendering
+    # render_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH,
+    #                                            render_mode='human')
+
+    train_env = DIPCEnv(episode_len=EPISODE_LENGTH)
+
+    # Create an additional environment for evaluation
+    eval_env = DIPCEnv(episode_len=EPISODE_LENGTH)
+
+    # A third environment for final rendering
+    render_env = DIPCEnv(episode_len=EPISODE_LENGTH, render_mode='human')
 
     print(f"env.observation_space.size(): {train_env.observation_space.shape}")
     print(f"env.action_space: {train_env.action_space.shape}")
-
-    # Create an additional environment for evaluation
-    eval_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH)
-
-    # A third environment for final rendering
-    render_env = DoubleInvertedPendulumCartEnv(episode_len=EPISODE_LENGTH,
-                                               render_mode='human')
 
     # Loss function for optimization - Mean Squared Error loss
     mse_loss = nn.MSELoss()

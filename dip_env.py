@@ -24,7 +24,7 @@ plt.ion()
 
 
 class DoubleInvertedPendulumCartEnv(gym.Env):
-    def __init__(self, episode_len, render_mode=None):
+    def __init__(self, episode_len, action_scaler=1, render_mode=None):
         self.cart_mass = 0.5
         self.pendulum_mass_1 = 0.162
         self.pendulum_mass_2 = 0.203
@@ -39,6 +39,7 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         self.tau = 0.0395
 
         self.episode_len = episode_len
+        self.action_scaler = action_scaler
         self.render_mode = render_mode
 
         self.x_goal_position = 0
@@ -104,14 +105,7 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
 
     def step(self, action):
         state = self.state
-        action = np.clip(action, -1.0, 1.0) * 10
-
-        # theta_dot = state.item(0)
-        # phi_dot = state.item(1)
-        # theta = state.item(2)
-        # phi = state.item(3)
-        # x = state.item(4)
-        # x_dot = state.item(5)
+        action = np.clip(action, -1.0, 1.0) * self.action_scaler
 
         u = action
         self.counter += 1
@@ -179,7 +173,7 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         theta = normalize_angle(self.state.item(2))
         phi = normalize_angle(self.state.item(3))
         x = state.item(4)
-        # x_dot = state.item(5)
+        x_dot = state.item(5)
 
         # angle_reward = (np.exp(-(theta**2)) + np.exp(-(phi**2))) / 2
         # angle_reward = np.exp(-max(theta**2, phi**2))
@@ -221,12 +215,15 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         #     print(f"max_x_vel: {self.max_x_vel} -- max_joint_vel: {self.max_joint_vel}")
 
         # Normalize state
-        norm_state = np.array([self.state.item(0), self.state.item(1), theta, phi,
-                               self.state.item(4), self.state.item(5)]) / self.normalizer
+        # norm_state = \
+        #     np.array([self.state.item(0), self.state.item(1), theta, phi,
+        #               self.state.item(4), self.state.item(5)]) / self.normalizer
+        norm_state = \
+            np.array([x, theta, phi, x_dot, theta_dot, phi_dot) / self.normalizer
 
         return norm_state, reward, terminated, truncated, info
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, fixed_init=False):
         if seed is not None:
             np.random.seed(seed)
 
@@ -234,10 +231,10 @@ class DoubleInvertedPendulumCartEnv(gym.Env):
         self.state = np.array([
             np.random.normal(loc=0, scale=0.1),  # theta1_dot
             np.random.normal(loc=0, scale=0.1),  # phi_dot
-            # np.random.uniform(low=-0.1, high=0.1),  # theta1
-            # np.random.uniform(low=-0.1, high=0.1),  # phi
-            np.random.uniform(low=-np.pi, high=np.pi),  # theta1
-            np.random.uniform(low=-np.pi, high=np.pi),  # phi
+            # np.random.uniform(low=-np.pi, high=np.pi),  # theta1
+            # np.random.uniform(low=-np.pi, high=np.pi),  # phi
+            np.random.uniform(low=-np.pi-0.314, high=-np.pi+0.314),  # theta1
+            np.random.uniform(low=-np.pi-0.314, high=-np.pi+0.314),  # phi
             # 0, 0,
             # -np.pi, -np.pi,
             np.random.uniform(low=-0.1, high=0.1),  # x
