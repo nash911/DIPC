@@ -131,7 +131,7 @@ if __name__ == "__main__":
     LOG_STD = 0#-3.29
 
     # ADAM
-    LR = 0.0001#0.0001#7.77e-05            # Learning rate
+    LR = 0.001#0.0001#7.77e-05            # Learning rate
     ANNEAL_LR = False     # For decaying learning rate over time
 
     # PPO
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     BATCH_SIZE = 32
     NORM_ADV = False#True       # Normalized advantage estimate
     CLIP_VLOSS = True     # Value network, allows to keep reward in a certain range
-    MAX_GRAD_NORM = 0.000001#5  # Same for gradient
+    MAX_GRAD_NORM = 5  # Same for gradient
     TARGET_KL = None      # Smoothes out the KL-Distributions, but really hard to tune
 
     parser = argparse.ArgumentParser(description='PPO for DIPC')

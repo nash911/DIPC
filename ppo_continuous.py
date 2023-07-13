@@ -384,7 +384,8 @@ class PPOContinuous():
             # Evaluate Policy
             if (episode - 1) % eval_freq == 0 or episode == num_episodes:
                 self.eval_agent()
-                mean_eval_rewards, max_eval_episodes_length = self.evaluate(num_episodes=1)
+                mean_eval_rewards, max_eval_episodes_length = \
+                    self.evaluate(num_episodes=1)
                 eval_reward.append(mean_eval_rewards)
                 eval_episode_len.append(max_eval_episodes_length)
                 eval_episode_t.append(episode)
