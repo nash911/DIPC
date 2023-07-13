@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "DIPC"
 version = "0.1.0"
-description = "DIP Cart environment with DDPG, PPO, and SAC"
+description = "Double Inverted Pendulum Cart environment with DDPG, PPO, and SAC"
 authors = ["Avinash Ranganath <nash911@gmail.com>"]
 readme = "README.md"
 
