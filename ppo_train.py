@@ -114,42 +114,42 @@ if __name__ == "__main__":
     # Environment
     # -----------
     SEED = 0
-    EPISODE_LENGTH = 200#500
-    ACTION_SCALER = 10#30.0
+    EPISODE_LENGTH = 200
+    ACTION_SCALER = 15
     GRAVITY_CONST = -9.81
     FIXED_INIT = False
 
     # Training
     UPDATE_EPOCHS = 4
-    EVAL_FREQ = 50#20
+    EVAL_FREQ = 50
     RECORD = True
     RECORD_PATH = 'videos/images/'
 
     # AGENT
-    HL1_SIZE = 64
-    HL2_SIZE = 64
-    LOG_STD = 0#-3.29
+    HL1_SIZE = 128
+    HL2_SIZE = 128
+    LOG_STD = -3.29
 
     # ADAM
-    LR = 0.001#0.0001#7.77e-05            # Learning rate
+    LR = 0.001            # Learning rate
     ANNEAL_LR = False     # For decaying learning rate over time
 
     # PPO
-    ENT_COEF = 0.1#0.00429        # Entropy
-    ENT_DECAY = 0.998     # Entropy decay
-    VF_COEF = 0.1#0.19         # Value function coefficient
-    CLIP_COEF = 0.1       # Clip coefficient, makes sure that agent doesn't drift too far
-    GAMMA = 0.99#0.9999          # Discount factor from Belman-equation (value of future rewards)
-    GAE_LAMBDA = 0.99     # Generalized Advantage Estimate
+    ENT_COEF = 0.1#0.2   # Entropy
+    ENT_DECAY = 0.998    # Entropy decay
+    VF_COEF = 0.1        # Value function coefficient
+    CLIP_COEF = 0.1      # Clip coefficient, makes sure that agent doesn't drift too far
+    GAMMA = 0.99         # Discount factor from Belman-equation (value of future rewards)
+    GAE_LAMBDA = 0.99    # Generalized Advantage Estimate
     BATCH_SIZE = 32
-    NORM_ADV = False#True       # Normalized advantage estimate
-    CLIP_VLOSS = True     # Value network, allows to keep reward in a certain range
-    MAX_GRAD_NORM = 5  # Same for gradient
-    TARGET_KL = None      # Smoothes out the KL-Distributions, but really hard to tune
+    NORM_ADV = False     # Normalized advantage estimate
+    CLIP_VLOSS = True    # Value network, allows to keep reward in a certain range
+    MAX_GRAD_NORM = 5    # Same for gradient
+    TARGET_KL = None     # Smoothes out the KL-Distributions, but really hard to tune
 
     parser = argparse.ArgumentParser(description='PPO for DIPC')
-    parser.add_argument('--num_episodes', type=int, default=5_000,
-                        help='maximum number of training episodes (default: 3_000)')
+    parser.add_argument('--num_episodes', type=int, default=10_000,
+                        help='maximum number of training episodes (default: 10_000)')
     parser.add_argument('--continuous',  default=False, action='store_true',
                         help='Continuous version of MountainCar (default: False)')
     parser.add_argument('--plot',  default=False, action='store_true',

@@ -393,7 +393,8 @@ class PPOContinuous():
 
                 if (mean_eval_rewards > best_eval_reward):
                     best_eval_reward = mean_eval_rewards
-                    saved_model_txt = "Best Model Saved @ Episode %d" % episode
+                    saved_model_txt = f"Best Model Saved @ Episode {episode-1} " + \
+                                      f"with: {np.round(best_eval_reward)}"
                     torch.save(self.agent.state_dict(), path + 'models/best_policy.pth')
 
                 # Save the most recent model as well
