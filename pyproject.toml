@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "DIPC"
+version = "0.1.0"
+description = "DIP Cart environment with DDPG, PPO, and SAC"
+authors = ["Avinash Ranganath <nash911@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+gymnasium = ">=0.28.1"
+torch = "^2.0"
+numpy = "^1.24"
+matplotlib = "^3.6.0"
+seaborn = "^0.12.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
