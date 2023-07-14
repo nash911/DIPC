@@ -86,7 +86,7 @@ class DIPCEnv(gym.Env):
                                        shape=(1,),
                                        dtype=np.float32)
 
-        self.vel_threshold = 1#300#200#40.0#35.0
+        self.vel_threshold = 1
         self.normalizer = np.array([self.x_threshold, np.pi, np.pi,
                                     1, self.vel_threshold, self.vel_threshold])
 
@@ -151,17 +151,14 @@ class DIPCEnv(gym.Env):
         phi_dot = state.item(5)
 
         terminated = bool(x < -self.x_threshold or x > self.x_threshold)
-        # terminated = terminated or bool(np.abs(theta_dot) > self.vel_threshold or
-        #                                 np.abs(phi_dot) > self.vel_threshold)
 
+        # Positive Reward
         angle_reward = np.exp(-(theta+phi))
         reward = angle_reward
 
+        # # Negative Reward
         # reward = -(theta**2 + phi**2 + (0.1 * theta_dot**2) + (0.1 * phi_dot**2) +
         #            (0.001 * action**2))
-        # # reward = -(theta**2 + phi**2 + (0.01 * theta_dot**2) + (0.01 * phi_dot**2) +
-        # #            (0.001 * action**2))
-        #
         # if terminated:
         #     reward += -10000
         # elif abs(theta) <= 0.1 and abs(phi) <= 0.1:
@@ -175,25 +172,6 @@ class DIPCEnv(gym.Env):
         else:
             info = {}
 
-        # x_tip = (x + self.pendulum_length_1 * np.sin(theta) +
-        #          self.pendulum_length_2 * np.sin(phi))
-        # y_tip = (self.pendulum_length_1 * np.cos(theta) +
-        #          self.pendulum_length_2 * np.cos(phi))
-
-        # print(f"action: {np.round(action[0], 4)}  reward: {np.round(reward, 4)}  " +
-        #       f"theta_dot: {np.round(theta_dot, 4)}  phi_dot: {np.round(phi_dot, 4)}  " +
-        #       f"theta: {np.round(theta, 4)}  phi: {np.round(phi, 4)}")
-        # input()
-
-        # self.max_x_vel = max(self.max_x_vel, self.state[0, 5])
-        # self.max_joint_vel = max(self.max_joint_vel, max(theta_dot, phi_dot))
-        # if terminated or truncated:
-        #     print(f"max_x_vel: {self.max_x_vel} -- max_joint_vel: {self.max_joint_vel}")
-
-        # Normalize state
-        # norm_state = \
-        #     np.array([self.state.item(0), self.state.item(1), theta, phi,
-        #               self.state.item(4), self.state.item(5)]) / self.normalizer
         norm_state = \
             np.array([x, theta, phi, x_dot, theta_dot, phi_dot]) / self.normalizer
 
@@ -206,12 +184,8 @@ class DIPCEnv(gym.Env):
         # Reset the state
         self.state = np.array([
             np.random.uniform(low=-0.1, high=0.1),  # x
-            # np.random.uniform(low=-np.pi, high=np.pi),  # theta1
-            # np.random.uniform(low=-np.pi, high=np.pi),  # phi
             np.random.uniform(low=-np.pi-0.314, high=-np.pi+0.314),  # theta
             np.random.uniform(low=-np.pi-0.314, high=-np.pi+0.314),  # phi
-            # 0, 0,
-            # -np.pi, -np.pi,
             np.random.normal(loc=0, scale=0.1),  # x_dot
             np.random.normal(loc=0, scale=0.1),  # theta_dot
             np.random.normal(loc=0, scale=0.1),  # phi_dot
@@ -254,7 +228,6 @@ class DIPCEnv(gym.Env):
         # Plot the rectangular patch
         # Connect vertices to form rectangle
         plt.plot(rect_vertices[:, 0], rect_vertices[:, 1], 'k-')
-        # Plot a marker at the center of the rectangle
         plt.plot(cart_x, cart_y, 'ko', markersize=10)
 
         plt.plot([cart_x, pendulum_1_x], [cart_y, pendulum_1_y], 'r-')
