@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.distributions.normal import Normal
+from torch.distributions.uniform import Uniform
 
 from utils import plot_ddpg_all
 
@@ -138,8 +139,15 @@ class Critic(nn.Module):
     def __init__(self, stateDim: int, actionDim: int, hl1_size: int, hl2_size: int):
         super().__init__()
 
-        # Hidden Layer 1
-        self.network = nn.Sequential(
+        self.network_1 = nn.Sequential(
+            self.init_layer(nn.Linear(in_features=stateDim+actionDim,
+                                      out_features=hl1_size)),
+            nn.ReLU(True),
+            self.init_layer(nn.Linear(in_features=hl1_size, out_features=hl2_size)),
+            nn.ReLU(True),
+            nn.Linear(in_features=hl2_size, out_features=1))
+
+        self.network_2 = nn.Sequential(
             self.init_layer(nn.Linear(in_features=stateDim+actionDim,
                                       out_features=hl1_size)),
             nn.ReLU(True),
@@ -154,22 +162,29 @@ class Critic(nn.Module):
 
     def forward(self, state, action):
         """Forward Pass"""
+        x = torch.concat((state, action), dim=1).to(torch.float32)
 
-        return self.network(torch.concat((state, action), dim=1))
+        return self.network_1(x), self.network_2(x)
+
+    def Q1(self, state, action):
+        """Forward Pass"""
+        x = torch.concat((state, action), dim=1).to(torch.float32)
+        return self.network_1(x)
 
 
-class DDPG():
+class TD3():
     """
-        Deep Deterministic Policy Gradient Class.
+        Twin Delayed Deep Deterministic Policy Gradient Class.
 
-        This class contains the DDPG implementation.
+        This class contains the TD3 implementation.
     """
 
     def __init__(self, train_env: gym.Env, eval_env: gym.Env, render_env: gym.Env,
-                 loss_fn=None, gamma: float = 0.99, rho: float = 0.01,
-                 stdev: float = 0.1, actor_lr: float = 0.001, critic_lr: float = 0.001,
-                 hl1_size: int = 48, hl2_size: int = 48, replay_mem_size: int = 100_000,
-                 device: str = "cpu"):
+                 init_training_period: int = 0, loss_fn=None, gamma: float = 0.99,
+                 rho: float = 0.01, policy_noise_stdev: float = 0.2,
+                 noise_clip: float = 0.5, explor_noise_stdev: float = 0.1,
+                 actor_lr: float = 0.001, critic_lr: float = 0.001, hl1_size: int = 48,
+                 hl2_size: int = 48, replay_mem_size: int = 100_000, device: str = "cpu"):
         """
            Parameters
            ----------
@@ -218,10 +233,20 @@ class DDPG():
 
         self.gamma = gamma
         self.rho = rho
+        self.init_training_period = init_training_period
+        self.noise_clip = noise_clip
 
         self.exploration_noise = Normal(
             torch.tensor([0] * self.num_actions, dtype=float),
-            torch.tensor([stdev] * self.num_actions, dtype=float))
+            torch.tensor([explor_noise_stdev] * self.num_actions, dtype=float))
+
+        self.policy_noise = Normal(
+            torch.tensor([0] * self.num_actions, dtype=float),
+            torch.tensor([policy_noise_stdev] * self.num_actions, dtype=float))
+
+        self.uniform_actions = Uniform(
+            torch.tensor([-1.0] * self.num_actions, dtype=float),
+            torch.tensor([1.0] * self.num_actions, dtype=float))
 
     def update_target_networks(self, rho: float = None) -> None:
         """
@@ -245,7 +270,7 @@ class DDPG():
                 target_param.data.copy_(param.data * self.rho +
                                         target_param.data * (1.0 - self.rho))
 
-    def load_policy_network(self, model_path) -> None:
+    def load_policy_network(self, model_path: str = 'models/best_policy.pth') -> None:
         """
            Method to load the actor from saved model file.
         """
@@ -253,8 +278,11 @@ class DDPG():
         self.actor.load_state_dict(torch.load(model_path))
         self.actor.eval()
 
-    def get_action(self, state, inference: bool = False):
-        action = self.actor(state)
+    def get_action(self, state, t: int = None, inference: bool = False):
+        if t is not None and t <= self.init_training_period:
+            action = self.uniform_actions.sample()
+        else:
+            action = self.actor(state)
 
         if not inference:
             action += self.exploration_noise.sample()
@@ -292,7 +320,7 @@ class DDPG():
 
         # Evaluate the current policy num_episodes number of times
         for episode in range(num_episodes):
-            observation, info = self.eval_env.reset(seed=episode, fixed_init=True)
+            observation, info = self.eval_env.reset(seed=episode)
 
             terminated = truncated = False
             episode_reward = 0
@@ -348,7 +376,7 @@ class DDPG():
         episode_rewards = list()
         episode_lengths = list()
         for e in range(num_episodes):
-            observation, info = self.render_env.reset(seed=e, fixed_init=fixed_init)
+            observation, info = self.render_env.reset(seed=e)
 
             # # Save the rendered frame as a .png image
             # if record:
@@ -395,8 +423,8 @@ class DDPG():
 
         return episode_rewards
 
-    def train(self, training_steps: int, init_training_period: int, batch_size: int = 32,
-              evaluation_freq: int = 5_000, verbose: bool = True, episode_len: int = 200,
+    def train(self, training_steps: int, batch_size: int = 32, update_freq: int = 2,
+              evaluation_freq: int = 5_000, verbose: bool = True, episode_len: int = 999,
               show_plot: bool = False, path: str = None):
         """
            Method for training the policy based with DDQL algorithm.
@@ -455,7 +483,7 @@ class DDPG():
             with torch.no_grad():
                 # From μ(sₜ|θ) get aₜ with exploration noise added
                 action = self.get_action(
-                    torch.tensor(state, dtype=torch.float32).to(self.device))
+                    torch.tensor(state, dtype=torch.float32).to(self.device), t)
 
             # Step through the enviroment with action aₜ, receiving reward rₜ, and
             # observing the new state sₜ₊₁
@@ -471,7 +499,7 @@ class DDPG():
             # Episode length for plotting
             episode_duration += 1
 
-            if t > init_training_period:
+            if t > self.init_training_period:
                 # From Replay Memory Buffer, uniformly sample a batch of transitions
                 states, actions, rewards, terminals, state_primes = \
                     self.replay_memory.sample_batch(batch_size=batch_size)
@@ -479,11 +507,16 @@ class DDPG():
                 # Update Critic Network
                 with torch.no_grad():
                     # Best next action estimate of the main-dqn, for the sampled batch
-                    # a' = μ'(sₜ₊₁|θ')
-                    action_primes = self.target_actor(state_primes)
+                    # a' = μ'(sₜ₊₁|θ') + Ɛ ~ Ⲛ(0, σ')
+                    action_primes = (self.target_actor(state_primes) +
+                                     self.policy_noise.sample().clamp(-self.noise_clip,
+                                                                      self.noise_clip))
 
                     # Q'(sₜ₊₁,aⱼ|θ')
-                    q_primes = self.target_critic(state_primes, action_primes).reshape(-1)
+                    q1_primes, q2_primes = \
+                        self.target_critic(state_primes, action_primes)
+
+                    q_primes = torch.min(q1_primes, q2_primes).reshape(-1)
 
                     # Target q value for the sampled batch:
                     # yⱼ = rⱼ, if sⱼ' is a terminal-state
@@ -492,11 +525,12 @@ class DDPG():
 
                 # Predicted q value of the main-dqn, for the sampled batch
                 # Q(sⱼ,aⱼ|θ)
-                pred_q = self.critic(states, actions).reshape(-1)
+                pred_q1, pred_q2 = self.critic(states, actions)
 
                 # Calculate loss:
                 # L(θ) = 𝔼[(Q(s,a|θ) - y)²]
-                critic_loss = self.loss_fn(pred_q, target_q)
+                critic_loss = (self.loss_fn(pred_q1.reshape(-1), target_q) +
+                               self.loss_fn(pred_q2.reshape(-1), target_q))
 
                 # Calculate the gradient of the critic loss w.r.t critic parameters θ
                 self.critic_optimizer.zero_grad()
@@ -505,31 +539,32 @@ class DDPG():
                 # Update critic network parameters θ:
                 self.critic_optimizer.step()
 
-                # Update Actor Network
-                actor_loss = -self.critic(states, self.actor(states)).mean()
+                if t % update_freq == 0:
+                    # Update Actor Network
+                    actor_loss = -self.critic.Q1(states, self.actor(states)).mean()
 
-                # Calculate the gradient of the actor loss w.r.t actor parameters θ
-                self.actor_optimizer.zero_grad()
-                actor_loss.backward()
+                    # Calculate the gradient of the actor loss w.r.t actor parameters θ
+                    self.actor_optimizer.zero_grad()
+                    actor_loss.backward()
 
-                # Update actor network parameters θ:
-                self.actor_optimizer.step()
+                    # Update actor network parameters θ:
+                    self.actor_optimizer.step()
 
-                # For plotting
-                t_list.append(t)
-                critic_losses.append(critic_loss.detach().numpy())
-                actor_losses.append(actor_loss.detach().numpy())
+                    # For plotting
+                    t_list.append(t)
+                    critic_losses.append(critic_loss.detach().numpy())
+                    actor_losses.append(actor_loss.detach().numpy())
 
-                # Update target networks
-                self.update_target_networks(self.rho)
+                    # Update target networks
+                    self.update_target_networks(self.rho)
 
             if (t + 1) % np.abs(evaluation_freq) == 0:
                 # Evaluate the current policy
                 self.actor.eval()
-                min_eval_rewards, max_eval_episodes_length = \
+                mean_eval_rewards, min_eval_episodes_length = \
                     self.evaluate(episode_len=episode_len)
-                eval_reward.append(min_eval_rewards)
-                eval_episode_len.append(max_eval_episodes_length)
+                eval_reward.append(mean_eval_rewards)
+                eval_episode_len.append(min_eval_episodes_length)
                 eval_episode_t.append(t)
 
                 if verbose:
@@ -538,10 +573,10 @@ class DDPG():
 
                 # Save a snapshot of the best policy (main-dqn) based on the
                 # evaluation results
-                if (min_eval_rewards > best_eval_reward):
+                if (mean_eval_rewards > best_eval_reward):
                     torch.save(self.actor.state_dict(), path + 'models/best_policy.pth')
-                    best_eval_reward = min_eval_rewards
-                    saved_model_txt = f"Best Model Saved @ Timestep {t+1} with " + \
+                    best_eval_reward = mean_eval_rewards
+                    saved_model_txt = f"Best Model Saved @ Timestep {t} with " + \
                         f"eval reward: {np.round(best_eval_reward, 4)}"
 
                 # Save the most recent model as well
@@ -574,4 +609,4 @@ class DDPG():
         # self.actor.load_state_dict(torch.load(path + 'models/best_policy.pth'))
         #
         # self.actor.eval()
-        # _ = self.final_evaluation(num_episodes=10, fixed_init=True)
+        # _ = self.final_evaluation(num_episodes=20)
