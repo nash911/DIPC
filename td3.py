@@ -104,7 +104,8 @@ class ReplayMemory():
             torch.tensor(self.states[sampled_idx], dtype=torch.float32).to(self.device),
             torch.tensor(self.actions[sampled_idx], dtype=torch.int64).to(self.device),
             torch.tensor(self.rewards[sampled_idx], dtype=torch.float32).to(self.device),
-            torch.tensor(self.terminals[sampled_idx], dtype=torch.int).to(self.device),
+            torch.tensor(self.terminals[sampled_idx], dtype=torch.float32).to(
+                self.device),
             torch.tensor(self.states[(sampled_idx + 1) % self.mem_count],
                          dtype=torch.float32).to(self.device))  # s'
 
