@@ -102,27 +102,36 @@ class ReplayMemory():
 
         return (
             torch.tensor(self.states[sampled_idx], dtype=torch.float32).to(self.device),
-            torch.tensor(self.actions[sampled_idx], dtype=torch.int64).to(self.device),
+            torch.tensor(self.actions[sampled_idx], dtype=torch.float32).to(self.device),
             torch.tensor(self.rewards[sampled_idx], dtype=torch.float32).to(self.device),
-            torch.tensor(self.terminals[sampled_idx], dtype=torch.float32).to(
-                self.device),
+            torch.tensor(self.terminals[sampled_idx], dtype=torch.int).to(self.device),
             torch.tensor(self.states[(sampled_idx + 1) % self.mem_count],
                          dtype=torch.float32).to(self.device))  # s'
 
 
 class Actor(nn.Module):
 
-    def __init__(self, stateDim: int, actionDim: int, hl1_size: int, hl2_size: int):
+    def __init__(self, stateDim: int, actionDim: int, hl1_size: int, hl2_size: int,
+                 action_low: float = -1.0, action_high: float = 1.0,
+                 log_std_min: float = -5, log_std_max: float = 2):
         super().__init__()
 
-        # Hidden Layer 1
         self.network = nn.Sequential(
             self.init_layer(nn.Linear(in_features=stateDim, out_features=hl1_size)),
             nn.ReLU(True),
             self.init_layer(nn.Linear(in_features=hl1_size, out_features=hl2_size)),
-            nn.ReLU(True),
-            nn.Linear(in_features=hl2_size, out_features=actionDim),
-            nn.Tanh(),)
+            nn.ReLU(True),)
+
+        self.mu = nn.Linear(in_features=hl2_size, out_features=actionDim)
+        self.log_std = nn.Linear(in_features=hl2_size, out_features=actionDim)
+
+        self.action_scale = torch.tensor(
+            (action_high - action_low) / 2.0, dtype=torch.float32)
+        self.action_bias = torch.tensor(
+            (action_high + action_low) / 2.0, dtype=torch.float32)
+
+        self.log_std_min = log_std_min
+        self.log_std_max = log_std_max
 
     def init_layer(self, layer, bias_const=0.0):
         torch.nn.init.kaiming_uniform_(layer.weight, nonlinearity='relu')
@@ -132,7 +141,46 @@ class Actor(nn.Module):
     def forward(self, state):
         """Forward Pass"""
 
-        return self.network(state)
+        hidden_out = self.network(state)
+        mu = self.mu(hidden_out)
+        log_std = self.log_std(hidden_out)
+
+        # From SpinUp / Denis Yarats
+        log_std = torch.tanh(log_std)
+        log_std = \
+            self.log_std_min + 0.5 * (self.log_std_max - self.log_std_min) * (log_std + 1)
+
+        # log_std = torch.clamp(log_std, min=self.log_std_min, max=self.log_std_max)
+
+        return mu, log_std
+
+    def sample(self, state):
+        mu, log_std = self.forward(state)
+        std = log_std.exp()
+
+        # Sample action, squash it with Tanh, and then scale it
+        normal = Normal(mu, std)
+        x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))
+        y_t = torch.tanh(x_t)
+        action = (y_t * self.action_scale) + self.action_bias
+
+        # log prob for entrophy
+        log_prob = normal.log_prob(x_t)
+
+        # Enforcing Action Bound
+        log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6)
+        log_prob = log_prob.sum(-1, keepdim=True)
+
+        return action, log_prob
+
+    def get_action(self, state):
+        hidden_out = self.network(state)
+        mu = self.mu(hidden_out)
+
+        # Squash mu and then scale it
+        action = (torch.tanh(mu) * self.action_scale) + self.action_bias
+
+        return action
 
 
 class Critic(nn.Module):
@@ -167,25 +215,21 @@ class Critic(nn.Module):
 
         return self.network_1(x), self.network_2(x)
 
-    def Q1(self, state, action):
-        """Forward Pass"""
-        x = torch.concat((state, action), dim=1).to(torch.float32)
-        return self.network_1(x)
 
-
-class TD3():
+class SAC():
     """
-        Twin Delayed Deep Deterministic Policy Gradient Class.
+        Soft Actor Critic Class.
 
-        This class contains the TD3 implementation.
+        This class contains the SAC implementation.
     """
 
     def __init__(self, train_env: gym.Env, eval_env: gym.Env, render_env: gym.Env,
                  init_training_period: int = 0, loss_fn=None, gamma: float = 0.99,
-                 rho: float = 0.01, policy_noise_stdev: float = 0.2,
-                 noise_clip: float = 0.5, explor_noise_stdev: float = 0.1,
-                 actor_lr: float = 0.001, critic_lr: float = 0.001, hl1_size: int = 48,
-                 hl2_size: int = 48, replay_mem_size: int = 100_000, device: str = "cpu"):
+                 rho: float = 0.01, entrophy_coeff: float = 0.1, auto_tune: bool = False,
+                 action_low: float = -1.0, action_high: float = 1.0, hl1_size: int = 48,
+                 hl2_size: int = 48, log_std_min: float = -5, log_std_max: float = 2,
+                 actor_lr: float = 0.001, critic_lr: float = 0.001, device: str = "cpu",
+                 entrophy_coeff_lr: float = 0.001, replay_mem_size: int = 100_000):
         """
            Parameters
            ----------
@@ -211,13 +255,13 @@ class TD3():
 
         # Create the main Actor and Critic networks
         self.actor = Actor(
-            self.state_size, self.num_actions, hl1_size, hl2_size).to(self.device)
+            stateDim=self.state_size, actionDim=self.num_actions, hl1_size=hl1_size,
+            hl2_size=hl2_size, action_low=action_low, action_high=action_high,
+            log_std_min=log_std_min, log_std_max=log_std_max).to(self.device)
         self.critic = Critic(
             self.state_size, self.num_actions, hl1_size, hl2_size).to(self.device)
 
-        # Create the target Actor and Critic networks
-        self.target_actor = Actor(
-            self.state_size, self.num_actions, hl1_size, hl2_size).to(self.device)
+        # Create the target Critic networks
         self.target_critic = Critic(
             self.state_size, self.num_actions, hl1_size, hl2_size).to(self.device)
 
@@ -234,16 +278,19 @@ class TD3():
 
         self.gamma = gamma
         self.rho = rho
+        self.auto_tune = auto_tune
         self.init_training_period = init_training_period
-        self.noise_clip = noise_clip
 
-        self.exploration_noise = Normal(
-            torch.tensor([0] * self.num_actions, dtype=float),
-            torch.tensor([explor_noise_stdev] * self.num_actions, dtype=float))
-
-        self.policy_noise = Normal(
-            torch.tensor([0] * self.num_actions, dtype=float),
-            torch.tensor([policy_noise_stdev] * self.num_actions, dtype=float))
+        # Automatic entropy tuning
+        if self.auto_tune:
+            self.target_entropy = \
+                -torch.prod(torch.Tensor(train_env.action_space.shape).to(device)).item()
+            self.log_entrophy_coeff = torch.zeros(1, requires_grad=True, device=device)
+            self.entrophy_coeff = self.log_entrophy_coeff.exp().item()
+            self.entrophy_coeff_optimizer = optim.Adam(
+                [self.log_entrophy_coeff], lr=entrophy_coeff_lr)
+        else:
+            self.entrophy_coeff = entrophy_coeff
 
         self.uniform_actions = Uniform(
             torch.tensor([-1.0] * self.num_actions, dtype=float),
@@ -257,17 +304,11 @@ class TD3():
 
         if rho is None:
             # Set target networks parameters to their respective main network parameters
-            self.target_actor.load_state_dict(self.actor.state_dict())
             self.target_critic.load_state_dict(self.critic.state_dict())
         else:
             # Polyak update target networks
             for target_param, param in zip(self.target_critic.parameters(),
                                            self.critic.parameters()):
-                target_param.data.copy_(param.data * self.rho +
-                                        target_param.data * (1.0 - self.rho))
-
-            for target_param, param in zip(self.target_actor.parameters(),
-                                           self.actor.parameters()):
                 target_param.data.copy_(param.data * self.rho +
                                         target_param.data * (1.0 - self.rho))
 
@@ -283,10 +324,10 @@ class TD3():
         if t is not None and t <= self.init_training_period:
             action = self.uniform_actions.sample()
         else:
-            action = self.actor(state)
-
-        if not inference:
-            action += self.exploration_noise.sample()
+            if not inference:
+                action, _ = self.actor.sample(state)
+            else:
+                action = self.actor.get_action(state)
 
         return action.cpu().numpy()
 
@@ -424,9 +465,9 @@ class TD3():
 
         return episode_rewards
 
-    def train(self, training_steps: int, batch_size: int = 32, update_freq: int = 2,
-              evaluation_freq: int = 5_000, verbose: bool = True, episode_len: int = 200,
-              show_plot: bool = False, path: str = None):
+    def train(self, training_steps: int, batch_size: int = 32, episode_len: int = 200,
+              evaluation_freq: int = 5_000, verbose: bool = True, show_plot: bool = False,
+              policy_update_freq: int = 2, target_update_freq: int = 1, path: str = None):
         """
            Method for training the policy based with DDQL algorithm.
 
@@ -456,6 +497,10 @@ class TD3():
         # Create a matlibplot canvas for plotting learning curves
         fig, axs = plt.subplots(3, figsize=(10, 11), sharey=False, sharex=True)
 
+        # Create directory to save best evaluation policy
+        if not os.path.isdir('models'):
+            os.makedirs('models')
+
         # Initialize lists for storing learning curve data
         t_list = list()
         critic_losses = list()
@@ -482,7 +527,7 @@ class TD3():
             state = observation
 
             with torch.no_grad():
-                # From μ(sₜ|θ) get aₜ with exploration noise added
+                # Sample aₜ ~ Ⲛ(μ(sₜ|θ), σ(sₜ|θ))
                 action = self.get_action(
                     torch.tensor(state, dtype=torch.float32).to(self.device), t)
 
@@ -508,21 +553,21 @@ class TD3():
                 # Update Critic Network
                 with torch.no_grad():
                     # Best next action estimate of the main-dqn, for the sampled batch
-                    # a' = μ'(sₜ₊₁|θ') + Ɛ ~ Ⲛ(0, σ')
-                    action_primes = (self.target_actor(state_primes) +
-                                     self.policy_noise.sample().clamp(-self.noise_clip,
-                                                                      self.noise_clip))
+                    # ã' ~ Ⲛ(μ(sₜ|θ), σ(sₜ|θ)); log π(ã'|sₜ)
+                    action_tilde_primes, log_pi_primes = self.actor.sample(state_primes)
 
                     # Q'(sₜ₊₁,aⱼ|θ')
                     q1_primes, q2_primes = \
-                        self.target_critic(state_primes, action_primes)
+                        self.target_critic(state_primes, action_tilde_primes)
 
                     q_primes = torch.min(q1_primes, q2_primes).reshape(-1)
 
                     # Target q value for the sampled batch:
                     # yⱼ = rⱼ, if sⱼ' is a terminal-state
                     # yⱼ = rⱼ + ɣ Q(sⱼ',aⱼ|θ'), otherwise.
-                    target_q = rewards + (self.gamma * q_primes * (1 - terminals))
+                    target_q = rewards + (1 - terminals) * \
+                        (self.gamma * (q_primes - (self.entrophy_coeff *
+                                                   log_pi_primes.reshape(-1))))
 
                 # Predicted q value of the main-dqn, for the sampled batch
                 # Q(sⱼ,aⱼ|θ)
@@ -540,24 +585,44 @@ class TD3():
                 # Update critic network parameters θ:
                 self.critic_optimizer.step()
 
-                if t % update_freq == 0:
-                    # Update Actor Network
-                    actor_loss = -self.critic.Q1(states, self.actor(states)).mean()
+                if t % policy_update_freq == 0:
+                    for update in range(policy_update_freq):
+                        action_tilde, log_pi = self.actor.sample(states)
 
-                    # Calculate the gradient of the actor loss w.r.t actor parameters θ
-                    self.actor_optimizer.zero_grad()
-                    actor_loss.backward()
+                        q1, q2 = self.critic(states, action_tilde)
 
-                    # Update actor network parameters θ:
-                    self.actor_optimizer.step()
+                        q = torch.min(q1, q2).reshape(-1)
 
-                    # For plotting
-                    t_list.append(t)
-                    critic_losses.append(critic_loss.detach().numpy())
-                    actor_losses.append(actor_loss.detach().numpy())
+                        # Update Actor Network
+                        actor_loss = \
+                            ((self.entrophy_coeff * log_pi.reshape(-1)) - q).mean()
 
+                        # Calculate the gradient of the actor loss w.r.t actor params θ
+                        self.actor_optimizer.zero_grad()
+                        actor_loss.backward()
+
+                        # Update actor network parameters θ:
+                        self.actor_optimizer.step()
+
+                        if self.auto_tune:
+                            entrophy_coeff_loss = (-self.log_entrophy_coeff * (
+                                log_pi.reshape(-1) + self.target_entropy).detach()).mean()
+
+                            self.entrophy_coeff_optimizer.zero_grad()
+                            entrophy_coeff_loss.backward()
+
+                            self.entrophy_coeff_optimizer.step()
+
+                            self.entrophy_coeff = self.log_entrophy_coeff.exp().item()
+
+                if t % target_update_freq == 0:
                     # Update target networks
                     self.update_target_networks(self.rho)
+
+                # For plotting
+                t_list.append(t)
+                critic_losses.append(critic_loss.detach().numpy())
+                actor_losses.append(actor_loss.detach().numpy())
 
             if (t + 1) % np.abs(evaluation_freq) == 0:
                 # Evaluate the current policy
@@ -607,7 +672,7 @@ class TD3():
         print("\nTraining Time: %.2f(s)" % (end_time - start_time))
         input("Completed training.\nPress Enter to start the final evaluation")
 
-        # self.actor.load_state_dict(torch.load(path + 'models/best_policy.pth'))
+        # self.actor.load_state_dict(torch.load('models/best_policy.pth'))
         #
         # self.actor.eval()
         # _ = self.final_evaluation(num_episodes=20)
