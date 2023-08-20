@@ -1,6 +1,6 @@
 # DIPC
 
-Double Inverted Pendulum Cart environment with DDPG, PPO, and SAC.
+Double Inverted Pendulum Cart environment with DDPG, PPO, SAC, and TD3.
 
 ## Installation
 
@@ -50,5 +50,33 @@ For evaluating the training the PPO model:
 
 ```bash
 $ python ppo_eval.py --path <path/to/trained/model/folder>
+
+```
+
+For training the SAC model:
+
+```bash
+$ python sac_train.py --verbose --plot
+
+```
+
+For evaluating the training the SAC model:
+
+```bash
+$ python sac_eval.py --path <path/to/trained/model/folder>
+
+```
+
+For training the TD3 model:
+
+```bash
+$ python td3_train.py --verbose --plot
+
+```
+
+For evaluating the training the TD3 model:
+
+```bash
+$ python td3_eval.py --path <path/to/trained/model/folder>
 
 ```
